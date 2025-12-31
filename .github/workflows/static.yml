@@ -55,6 +55,7 @@ jobs:
 
       - name: Generate previews
         run: |
+          sudo apt install imagemagick
           cd photos
           for photo in *;do
             magick "$photo" -resize 300x300 ../previews/"$photo"
