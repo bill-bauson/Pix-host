@@ -39,7 +39,7 @@ jobs:
         run: |
           cd photos
           for photo in *;do
-            sed -i "/CREATE_INDEX/i<li><a href=\"../viewers/$photo.html\">$photo<br><img src=\"../previews/$photo\" /></li>" ../index.html
+            sed -i "/CREATE_INDEX/i<li><a href=\"./viewers/$photo.html\">$photo<br><img src=\"./previews/$photo\" /></li>" ../index.html
           done
           sed -i "/CREATE_INDEX/d" ../index.html
 
