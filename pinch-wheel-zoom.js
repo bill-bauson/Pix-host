@@ -1,72 +1,94 @@
 AFRAME.registerComponent('pinch-wheel-zoom', {
-  schema: {
-    minFov: { default: 30 },
-    maxFov: { default: 100 },
-    wheelSensitivity: { default: 0.05 },
-    pinchSensitivity: { default: 0.15 }
-  },
+	schema: {
+		minFov: { default: 30 },
+		maxFov: { default: 100 },
+		wheelSensitivity: { default: 0.05 },
+		pinchSensitivity: { default: 0.15 }
+	},
 
-  init: function () {
-    this.camera = this.el.getObject3D('camera');
-    this.fov = this.camera.fov;
+	init: function () {
+		this.camera = this.el.getObject3D('camera');
+		this.fov = this.camera.fov;
 
-    this.startPinchDistance = null;
+		this.startPinchDistance = null;
 
-    this.onWheel = this.onWheel.bind(this);
-    this.onTouchStart = this.onTouchStart.bind(this);
-    this.onTouchMove = this.onTouchMove.bind(this);
-    this.onTouchEnd = this.onTouchEnd.bind(this);
+		this.onWheel = this.onWheel.bind(this);
+		this.onTouchStart = this.onTouchStart.bind(this);
+		this.onTouchMove = this.onTouchMove.bind(this);
+		this.onTouchEnd = this.onTouchEnd.bind(this);
 
-    window.addEventListener('wheel', this.onWheel, { passive: false });
-    window.addEventListener('touchstart', this.onTouchStart, { passive: false });
-    window.addEventListener('touchmove', this.onTouchMove, { passive: false });
-    window.addEventListener('touchend', this.onTouchEnd);
-  },
+		window.addEventListener('wheel', this.onWheel, { passive: false });
+		window.addEventListener('touchstart', this.onTouchStart, { passive: false });
+		window.addEventListener('touchmove', this.onTouchMove, { passive: false });
+		window.addEventListener('touchend', this.onTouchEnd);
+	},
 
-  remove: function () {
-    window.removeEventListener('wheel', this.onWheel);
-    window.removeEventListener('touchstart', this.onTouchStart);
-    window.removeEventListener('touchmove', this.onTouchMove);
-    window.removeEventListener('touchend', this.onTouchEnd);
-  },
+	remove: function () {
+		window.removeEventListener('wheel', this.onWheel);
+		window.removeEventListener('touchstart', this.onTouchStart);
+		window.removeEventListener('touchmove', this.onTouchMove);
+		window.removeEventListener('touchend', this.onTouchEnd);
+	},
 
-  setFov: function (fov) {
-    fov = Math.max(this.data.minFov, Math.min(this.data.maxFov, fov));
-    this.camera.fov = fov;
-    this.camera.updateProjectionMatrix();
-    this.fov = fov;
-  },
+	setFov: function (fov) {
+		fov = Math.max(this.data.minFov, Math.min(this.data.maxFov, fov));
+		this.camera.fov = fov;
+		this.camera.updateProjectionMatrix();
+		this.fov = fov;
+	},
 
-  /* Mouse wheel zoom */
-  onWheel: function (e) {
-    e.preventDefault();
-    this.setFov(this.fov + e.deltaY * this.data.wheelSensitivity);
-  },
+	/* Mouse wheel zoom */
+	onWheel: function (e) {
+		e.preventDefault();
+		this.setFov(this.fov + e.deltaY * this.data.wheelSensitivity);
+	},
 
-  /* Touch pinch zoom */
-  onTouchStart: function (e) {
-    if (e.touches.length === 2) {
-      this.startPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
-    }
-  },
+	/* Touch pinch zoom */
+	onTouchStart: function (e) {
+		if (e.touches.length === 2) {
+			this.startPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
+		}
+	},
 
-  onTouchMove: function (e) {
-    if (e.touches.length === 2 && this.startPinchDistance) {
-      e.preventDefault();
-      const currentDistance = this.getDistance(e.touches[0], e.touches[1]);
-      const delta = this.startPinchDistance - currentDistance;
-      this.setFov(this.fov + delta * this.data.pinchSensitivity);
-      this.startPinchDistance = currentDistance;
-    }
-  },
+	onTouchMove: function (e) {
+		if (e.touches.length === 2 && this.startPinchDistance) {
+			e.preventDefault();
+			const currentDistance = this.getDistance(e.touches[0], e.touches[1]);
+			const delta = this.startPinchDistance - currentDistance;
+			this.setFov(this.fov + delta * this.data.pinchSensitivity);
+			this.startPinchDistance = currentDistance;
+		}
+	},
 
-  onTouchEnd: function () {
-    this.startPinchDistance = null;
-  },
+	onTouchEnd: function () {
+		this.startPinchDistance = null;
+	},
 
-  getDistance: function (t1, t2) {
-    const dx = t1.clientX - t2.clientX;
-    const dy = t1.clientY - t2.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
+	getDistance: function (t1, t2) {
+		const dx = t1.clientX - t2.clientX;
+		const dy = t1.clientY - t2.clientY;
+		return Math.sqrt(dx * dx + dy * dy);
+	}
+});
+
+
+AFRAME.registerComponent('mobile-look-fix', {
+	init: function () {
+		const lookControls = AFRAME.components['look-controls'].Component.prototype;
+		const PI_2 = Math.PI / 2;
+
+		lookControls.onTouchMove = function (t) {
+			if (!this.touchStarted || !this.data.touchEnabled) return;
+
+			const canvas = this.el.sceneEl.canvas;
+			const deltaYaw = 2 * Math.PI * (t.touches[0].pageX - this.touchStart.x) / canvas.clientHeight * 0.5;
+			const deltaPitch = 2 * Math.PI * (t.touches[0].pageY - this.touchStart.y) / canvas.clientHeight * 0.5;
+
+			this.yawObject.rotation.y -= deltaYaw;
+			this.pitchObject.rotation.x -= deltaPitch;
+			this.pitchObject.rotation.x = Math.max(-PI_2, Math.min(PI_2, this.pitchObject.rotation.x));
+
+			this.touchStart = { x: t.touches[0].pageX, y: t.touches[0].pageY };
+		};
+	}
 });
